@@ -98,8 +98,6 @@ func FromURL(u *url.URL, forward Dialer, resolver Resolver) (Dialer, error) {
 		return HTTPS("tcp", u.Host, auth, forward, resolver)
 	case "ssh", "ssh2":
 		return SSH2("tcp", u.Host, auth, forward, resolver)
-	case "quic":
-		return QUIC("udp", u.Host, auth, forward, resolver)
 	}
 
 	// If the scheme doesn't match any of the built-in schemes, see if it
