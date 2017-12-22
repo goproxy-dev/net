@@ -18,6 +18,10 @@ import (
 	"github.com/phuslu/net/http2"
 )
 
+type TLSDialer interface {
+	DialTLS(network, addr string, cfg *bogo.Config) (net.Conn, error)
+}
+
 func HTTP2(network, addr string, auth *Auth, forward Dialer, resolver Resolver) (Dialer, error) {
 	var hostname string
 
@@ -39,7 +43,7 @@ func HTTP2(network, addr string, auth *Auth, forward Dialer, resolver Resolver) 
 		h.password = auth.Password
 	}
 
-	tlsConfig := &bogo.Config{
+	bogoConfig := &bogo.Config{
 		MinVersion:         bogo.VersionTLS12,
 		MaxVersion:         bogo.VersionTLS13,
 		NextProtos:         []string{"h2"},
@@ -57,7 +61,7 @@ func HTTP2(network, addr string, auth *Auth, forward Dialer, resolver Resolver) 
 				return nil, err
 			}
 
-			tlsConn := bogo.Client(conn, tlsConfig)
+			tlsConn := bogo.Client(conn, bogoConfig)
 
 			err = tlsConn.Handshake()
 			if err != nil {
@@ -66,6 +70,12 @@ func HTTP2(network, addr string, auth *Auth, forward Dialer, resolver Resolver) 
 
 			return tlsConn, nil
 		},
+	}
+
+	if d, ok := h.forward.(TLSDialer); ok {
+		h.transport.DialTLS = func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+                        return d.DialTLS(h.network, h.addr, bogoConfig)
+                }
 	}
 
 	return h, nil
